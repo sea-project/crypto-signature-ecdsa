@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	ecc "github.com/sea-project/crypto-ecc-s256"
-	"github.com/sea-project/sea-pkg/util/math"
+	math "github.com/sea-project/stdlib-math"
 	"math/big"
 )
 
