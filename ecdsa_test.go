@@ -61,3 +61,13 @@ func TestPrivateKey_Sign(t *testing.T) {
 	t.Log("结果：", istrue)
 	t.Log("导公钥：", pubs.ToHex())
 }
+
+// 比特币WIF转换
+func Test_BTC(t *testing.T) {
+	wif := "KxbF2HbMFTTfpiic6X8g5GSaKSLLqFYn5bfMquNrYwokySpqeBn8"
+	prikey, err := WIFToPrvKey(wif)
+	if err != nil {
+		t.Log(err)
+	}
+	t.Log(prikey.ToHex())
+}

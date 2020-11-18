@@ -303,3 +303,10 @@ func mac(alg func() hash.Hash, k, m []byte) []byte {
 	h.Write(m)
 	return h.Sum(nil)
 }
+
+// DoubleHashB calculates hash(hash(b)) and returns the resulting bytes.
+func DoubleHashB(b []byte) []byte {
+	first := sha256.Sum256(b)
+	second := sha256.Sum256(first[:])
+	return second[:]
+}

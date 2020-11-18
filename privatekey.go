@@ -1,10 +1,12 @@
 package ecdsa
 
 import (
+	"bytes"
 	e "crypto/ecdsa"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	base58 "github.com/sea-project/crypto-codec-base58"
 	ecc "github.com/sea-project/crypto-ecc-s256"
 	math "github.com/sea-project/stdlib-math"
 	"math/big"
@@ -71,4 +73,44 @@ func ToECDSA(d []byte, strict bool) (*PrivateKey, error) {
 		return nil, errors.New("invalid private key")
 	}
 	return priv, nil
+}
+
+// WIFToPrvKey 哈希字符串转私钥
+func WIFToPrvKey(wif string) (*PrivateKey, error) {
+	decoded, err := base58.Decode(wif, base58.BitcoinAlphabet)
+	if err != nil {
+		return nil, err
+	}
+	decodedLen := len(decoded)
+	var compress bool
+	// Length of base58 decoded WIF must be 32 bytes + an optional 1 byte
+	// (0x01) if compressed, plus 1 byte for netID + 4 bytes of checksum.
+	switch decodedLen {
+	case 1 + 32 + 1 + 4:
+		if decoded[33] != 0x01 {
+			return nil, errors.New("malformed private key")
+		}
+		compress = true
+	case 1 + 32 + 4:
+		compress = false
+	default:
+		return nil, errors.New("malformed private key")
+	}
+	// Checksum is first four bytes of double SHA256 of the identifier byte
+	// and privKey.  Verify this matches the final 4 bytes of the decoded
+	// private key.
+	var tosum []byte
+	if compress {
+		tosum = decoded[:1+32+1]
+	} else {
+		tosum = decoded[:1+32]
+	}
+	cksum := DoubleHashB(tosum)[:4]
+	if !bytes.Equal(cksum, decoded[decodedLen-4:]) {
+		return nil, errors.New("checksum mismatch")
+	}
+
+	privKeyBytes := decoded[1 : 1+32]
+	privKey, _ := PrivKeyFromBytes(ecc.S256(), privKeyBytes)
+	return privKey, nil
 }

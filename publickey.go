@@ -9,11 +9,15 @@ import (
 )
 
 const (
+	// 压缩序列化公钥的长度
+	PubKeyBytesLenCompressed = 33
 	// 序列化公钥的长度
 	PubKeyBytesLenUncompressed = 65
 
 	// x coord + y coord
 	pubkeyUncompressed byte = 0x4
+	// y_bit + x coord
+	pubkeyCompressed byte = 0x2
 )
 
 type PublicKey e.PublicKey
@@ -44,6 +48,17 @@ func (p *PublicKey) SerializeUncompressed() []byte {
 	b = append(b, pubkeyUncompressed)
 	b = paddedAppend(32, b, p.X.Bytes())
 	return paddedAppend(32, b, p.Y.Bytes())
+}
+
+// SerializeCompressed serializes a public key in a 33-byte compressed format.
+func (p *PublicKey) SerializeCompressed() []byte {
+	b := make([]byte, 0, PubKeyBytesLenCompressed)
+	format := pubkeyCompressed
+	if isOdd(p.Y) {
+		format |= 0x1
+	}
+	b = append(b, format)
+	return paddedAppend(32, b, p.X.Bytes())
 }
 
 // FromECDSAPub 椭圆加密公钥转坐标
