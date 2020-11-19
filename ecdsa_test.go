@@ -70,4 +70,5 @@ func Test_BTC(t *testing.T) {
 		t.Log(err)
 	}
 	t.Log(prikey.ToHex())
+	t.Log(PrvKeyToWIF(prikey, true))
 }

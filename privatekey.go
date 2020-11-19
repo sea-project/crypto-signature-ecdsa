@@ -136,7 +136,7 @@ func PrvKeyToWIF(privKey *PrivateKey, compress bool) string {
 	}
 
 	a := make([]byte, 0, encodeLen)
-	a = append(a, mainnetVersion)
+	a = append(a, 0x80)
 	// Pad and append bytes manually, instead of using Serialize, to
 	// avoid another call to make.
 	a = paddedAppend(32, a, privKey.D.Bytes())
