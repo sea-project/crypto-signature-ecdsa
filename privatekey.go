@@ -18,6 +18,13 @@ var (
 	secp256k1N, _ = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
 )
 
+const (
+	mainnetVersion = byte(0x00) // 定义版本号，一个字节[mainnet]
+	// compressMagic is the magic byte used to identify a WIF encoding for
+	// an address created from a compressed serialized public key.
+	compressMagic byte = 0x01
+)
+
 // ToPubKey 返回与此私钥对应的公钥
 func (p *PrivateKey) ToPubKey() *PublicKey {
 	return (*PublicKey)(&p.PublicKey)
@@ -113,4 +120,30 @@ func WIFToPrvKey(wif string) (*PrivateKey, error) {
 	privKeyBytes := decoded[1 : 1+32]
 	privKey, _ := PrivKeyFromBytes(ecc.S256(), privKeyBytes)
 	return privKey, nil
+}
+
+// PrvKeyToWIF creates the Wallet Import Format string encoding of a WIF structure.
+// See DecodeWIF for a detailed breakdown of the format and requirements of
+// a valid WIF string.
+func PrvKeyToWIF(privKey *PrivateKey, compress bool) string {
+	// Precalculate size.  Maximum number of bytes before base58 encoding
+	// is one byte for the network, 32 bytes of private key, possibly one
+	// extra byte if the pubkey is to be compressed, and finally four
+	// bytes of checksum.
+	encodeLen := 1 + 32 + 4
+	if compress {
+		encodeLen++
+	}
+
+	a := make([]byte, 0, encodeLen)
+	a = append(a, mainnetVersion)
+	// Pad and append bytes manually, instead of using Serialize, to
+	// avoid another call to make.
+	a = paddedAppend(32, a, privKey.D.Bytes())
+	if compress {
+		a = append(a, compressMagic)
+	}
+	cksum := DoubleHashB(a)[:4]
+	a = append(a, cksum...)
+	return base58.Encode(a, base58.BitcoinAlphabet)
 }
