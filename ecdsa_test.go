@@ -2,6 +2,7 @@ package ecdsa
 
 import (
 	"encoding/hex"
+	base58 "github.com/sea-project/crypto-codec-base58"
 	ecc "github.com/sea-project/crypto-ecc-s256"
 	"testing"
 )
@@ -71,4 +72,11 @@ func Test_BTC(t *testing.T) {
 	}
 	t.Log(prikey.ToHex())
 	t.Log(PrvKeyToWIF(prikey, true))
+}
+
+// sha256
+func Test_Sha3(t *testing.T) {
+	aa, _ := hex.DecodeString("8028ea039252a3c0b5f3ec2d92f664011561ccf69f434512f20d0daa5fb2a349310118afa009")
+	a := base58.Encode(aa, base58.BitcoinAlphabet)
+	t.Log(a)
 }

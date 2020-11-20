@@ -83,6 +83,10 @@ func ToECDSA(d []byte, strict bool) (*PrivateKey, error) {
 }
 
 // WIFToPrvKey 哈希字符串转私钥
+// 1 WIF：KxbF2HbMFTTfpiic6X8g5GSaKSLLqFYn5bfMquNrYwokySpqeBn8
+// 2 base58解码：8028ea039252a3c0b5f3ec2d92f664011561ccf69f434512f20d0daa5fb2a349310118afa009
+// 3 丢弃后四字节：8028ea039252a3c0b5f3ec2d92f664011561ccf69f434512f20d0daa5fb2a3493101
+// 4 丢弃前后各一字节：28ea039252a3c0b5f3ec2d92f664011561ccf69f434512f20d0daa5fb2a34931
 func WIFToPrvKey(wif string) (*PrivateKey, error) {
 	decoded, err := base58.Decode(wif, base58.BitcoinAlphabet)
 	if err != nil {
@@ -125,6 +129,12 @@ func WIFToPrvKey(wif string) (*PrivateKey, error) {
 // PrvKeyToWIF creates the Wallet Import Format string encoding of a WIF structure.
 // See DecodeWIF for a detailed breakdown of the format and requirements of
 // a valid WIF string.
+// 1 私钥：28ea039252a3c0b5f3ec2d92f664011561ccf69f434512f20d0daa5fb2a34931
+// 2 前缀增加0x80，后缀增加01：8028ea039252a3c0b5f3ec2d92f664011561ccf69f434512f20d0daa5fb2a3493101
+// 3 进行hash：f0722e985124f3d12e63abc8016f7c775471ff76c59143c52334b99bf0d13547
+// 4 在进行hash：18afa0093fe60a479ee51ffe026900aaa4ae545a3c6d3bea0192b82e3a59bc06
+// 5 取双hash结果前四个字节，加在第二步结果后面：8028ea039252a3c0b5f3ec2d92f664011561ccf69f434512f20d0daa5fb2a349310118afa009
+// 6 进行base58编码：KxbF2HbMFTTfpiic6X8g5GSaKSLLqFYn5bfMquNrYwokySpqeBn8
 func PrvKeyToWIF(privKey *PrivateKey, compress bool) string {
 	// Precalculate size.  Maximum number of bytes before base58 encoding
 	// is one byte for the network, 32 bytes of private key, possibly one
