@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	ecc "github.com/sea-project/crypto-ecc-s256"
+	sha3 "github.com/sea-project/crypto-hash-sha3"
 )
 
 const (
@@ -93,4 +94,11 @@ func paddedAppend(size uint, dst, src []byte) []byte {
 		dst = append(dst, 0)
 	}
 	return append(dst, src...)
+}
+
+// PubkeyToAddress 公钥转地址方法
+func (p *PublicKey) ToAddress() ETHAddress {
+	pubBytes := p.FromECDSAPub()
+	i := sha3.Keccak256(pubBytes[1:])[12:]
+	return BytesToAddress(i)
 }

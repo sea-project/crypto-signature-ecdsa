@@ -1,7 +1,5 @@
 github.com/sea-project/crypto-codec-base58 v0.0.0-20201116150651-9220e4cb699a h1:sfkwUCpGD/cl1SG0MMDVOauK9aYNSskWbQcfca5axMk=
 github.com/sea-project/crypto-codec-base58 v0.0.0-20201116150651-9220e4cb699a/go.mod h1:UJuVqi45vt28rIUjLzMVpxYGuKkWFKZzEUXI3wgiy2M=
-github.com/sea-project/crypto-codec-rlp v0.0.0-20201124012910-6094ce9176e4 h1:UnPVCrX/qnGKpalcjMNF5ZXR2oG5WBdd09fJKGsg3Do=
-github.com/sea-project/crypto-codec-rlp v0.0.0-20201124012910-6094ce9176e4/go.mod h1:RmxigORAu3nYNiSNrt8iTRr2dpG4grVH7kc4OiKfdTw=
 github.com/sea-project/crypto-codec-rlp v0.0.0-20201125020933-b552b25a9c03 h1:GqwjAGJ1YiA6hlvdYXBf7hl2qtqXC6smVjavXE2DHyo=
 github.com/sea-project/crypto-codec-rlp v0.0.0-20201125020933-b552b25a9c03/go.mod h1:ISkm2STOTZ6ubZTC3y3dbHZlX52e+nXNmaEMTHY5sQs=
 github.com/sea-project/crypto-ecc-s256 v0.0.0-20201112115545-6e26b604f2b7 h1:AxiqydFgAhHvDYXJdc6SfuuqbLr84U6lhbZzRbnk0q0=
@@ -26,8 +24,6 @@ golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5h
 golang.org/x/sys v0.0.0-20190412213103-97732733099d h1:+R4KGOnez64A81RvjARKc4UT5/tI9ujCIVX+P5KiHuI=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191026070338-33540a1f6037/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8 h1:AvbQYmiaaaza3cW3QXRyPo5kYgpFIzOAfeAAN7m3qQ4=
-golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68 h1:nxC68pudNYkKU6jWhgrqdreuFiOQWj1Fs7T3VrH4Pjw=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/term v0.0.0-20201117132131-f5c789dd3221/go.mod h1:Nr5EML6q2oocZ2LXRh80K7BxOlk5/8JxuGnuhpl+muw=
