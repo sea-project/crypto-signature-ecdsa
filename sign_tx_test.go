@@ -54,7 +54,7 @@ func Test_ETHSign(t *testing.T) {
 	t.Log(hex.EncodeToString(txhash[:]))
 }
 
-func Test_BTCSign(t *testing.T) {
+func Test_BTCSignTX(t *testing.T) {
 	// 1、查询from未花费输出是否
 	// 2、添加output
 	// 3、计算手续费
@@ -80,4 +80,23 @@ func Test_BTCSign(t *testing.T) {
 	}*/
 	//vin :
 	//a := estimateFee(1,2,442.478)
+}
+
+func Test_BTCSign(t *testing.T) {
+	/*r, _ := hex.DecodeString("693ed2b9f128998cca5a0be5262358df68250cff4458950094ae6da1c6637bbf")
+	s, _ := hex.DecodeString("106aeafb9f6a52382a80e31cfdcc3131a6c16a895f4ffbd1edcaa98e57e5f7e9")
+	pub, _ := hex.DecodeString("03a21d128cb39dc9953fa59ae50f07f2f8287aeefa50712138ac6396bd5fc754a4")
+	hash, _ := hex.DecodeString("f32f157d6fa5136ae1b1fc0e66d735163124c89c")
+	sig := &Signature{
+		R: new(big.Int).SetBytes(r),
+		S: new(big.Int).SetBytes(s),
+	}
+	PK,_ := ParsePubKey(pub)
+	pubkey, ok, err := RecoverCompact(ecc.S256(), sig.Serialize(), hash)
+	if err == nil {
+		t.Log(pubkey.ToHex())
+		t.Log(ok)
+	} else {
+		t.Log(err)
+	}*/
 }

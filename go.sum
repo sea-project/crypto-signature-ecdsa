@@ -10,6 +10,8 @@ github.com/sea-project/stdlib-bytes v0.0.0-20201112140324-eb835f449f02 h1:iEDLbl
 github.com/sea-project/stdlib-bytes v0.0.0-20201112140324-eb835f449f02/go.mod h1:HnErhVuroF+dt1ZB8A0IrlMhGUC6AwvEhDFzF61zWS4=
 github.com/sea-project/stdlib-bytes v0.0.0-20201123115122-e27677f42c4b h1:92Q0/7/C95HK23JRWXMMBYh8lqihNrjmKu7uIEVxVe0=
 github.com/sea-project/stdlib-bytes v0.0.0-20201123115122-e27677f42c4b/go.mod h1:HnErhVuroF+dt1ZB8A0IrlMhGUC6AwvEhDFzF61zWS4=
+github.com/sea-project/stdlib-bytes v0.0.0-20201207135334-b59baa2c678e h1:aQeBtbC54e33dyLnoMok6EsbCTVMnzLNFy+2DZ4I6qE=
+github.com/sea-project/stdlib-bytes v0.0.0-20201207135334-b59baa2c678e/go.mod h1:HnErhVuroF+dt1ZB8A0IrlMhGUC6AwvEhDFzF61zWS4=
 github.com/sea-project/stdlib-math v0.0.0-20201112140608-772ee2e2934d h1:Gh2Ih9YUn3aKzKTBBSlVfkWS7PkqSS5sAsnHAWgKdfw=
 github.com/sea-project/stdlib-math v0.0.0-20201112140608-772ee2e2934d/go.mod h1:M8Cs998lz3vNfN5XyXgoPzWsJ9IDJ+qTHV4G/g1hAps=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

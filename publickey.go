@@ -5,8 +5,10 @@ import (
 	"crypto/elliptic"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	ecc "github.com/sea-project/crypto-ecc-s256"
 	sha3 "github.com/sea-project/crypto-hash-sha3"
+	"math/big"
 )
 
 const (
@@ -19,6 +21,7 @@ const (
 	pubkeyUncompressed byte = 0x4
 	// y_bit + x coord
 	pubkeyCompressed byte = 0x2
+	pubkeyHybrid     byte = 0x6 // y_bit + x coord + y coord
 )
 
 type PublicKey e.PublicKey
@@ -68,6 +71,68 @@ func (p *PublicKey) FromECDSAPub() []byte {
 		return nil
 	}
 	return elliptic.Marshal(ecc.S256(), p.X, p.Y)
+}
+
+// ParsePubKey parses a public key for a koblitz curve from a bytestring into a
+// ecdsa.Publickey, verifying that it is valid. It supports compressed,
+// uncompressed and hybrid signature formats.
+func ParsePubKey(pubKeyStr []byte) (key *PublicKey, err error) {
+	curve := ecc.S256()
+	pubkey := PublicKey{}
+	pubkey.Curve = curve
+
+	if len(pubKeyStr) == 0 {
+		return nil, errors.New("pubkey string is empty")
+	}
+
+	format := pubKeyStr[0]
+	ybit := (format & 0x1) == 0x1
+	format &= ^byte(0x1)
+
+	switch len(pubKeyStr) {
+	case PubKeyBytesLenUncompressed:
+		if format != pubkeyUncompressed && format != pubkeyHybrid {
+			return nil, fmt.Errorf("invalid magic in pubkey str: "+
+				"%d", pubKeyStr[0])
+		}
+
+		pubkey.X = new(big.Int).SetBytes(pubKeyStr[1:33])
+		pubkey.Y = new(big.Int).SetBytes(pubKeyStr[33:])
+		// hybrid keys have extra information, make use of it.
+		if format == pubkeyHybrid && ybit != isOdd(pubkey.Y) {
+			return nil, fmt.Errorf("ybit doesn't match oddness")
+		}
+
+		if pubkey.X.Cmp(pubkey.Curve.Params().P) >= 0 {
+			return nil, fmt.Errorf("pubkey X parameter is >= to P")
+		}
+		if pubkey.Y.Cmp(pubkey.Curve.Params().P) >= 0 {
+			return nil, fmt.Errorf("pubkey Y parameter is >= to P")
+		}
+		if !pubkey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
+			return nil, fmt.Errorf("pubkey isn't on secp256k1 curve")
+		}
+
+	case PubKeyBytesLenCompressed:
+		// format is 0x2 | solution, <X coordinate>
+		// solution determines which solution of the curve we use.
+		/// y^2 = x^3 + Curve.B
+		if format != pubkeyCompressed {
+			return nil, fmt.Errorf("invalid magic in compressed "+
+				"pubkey string: %d", pubKeyStr[0])
+		}
+		pubkey.X = new(big.Int).SetBytes(pubKeyStr[1:33])
+		pubkey.Y, err = decompressPoint(curve, pubkey.X, ybit)
+		if err != nil {
+			return nil, err
+		}
+
+	default: // wrong!
+		return nil, fmt.Errorf("invalid pub key length %d",
+			len(pubKeyStr))
+	}
+
+	return &pubkey, nil
 }
 
 // HexToPubKey 哈希字符串转换secp256k1公钥

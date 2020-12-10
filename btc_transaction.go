@@ -1,5 +1,111 @@
 package ecdsa
 
+// Worst case script and input/output size estimates.
+const (
+	// RedeemP2PKHSigScriptSize is the worst case (largest) serialize size
+	// of a transaction input script that redeems a compressed P2PKH output.
+	// It is calculated as:
+	//
+	//   - OP_DATA_73
+	//   - 72 bytes DER signature + 1 byte sighash
+	//   - OP_DATA_33
+	//   - 33 bytes serialized compressed pubkey
+	RedeemP2PKHSigScriptSize = 1 + 73 + 1 + 33
+
+	// P2PKHPkScriptSize is the size of a transaction output script that
+	// pays to a compressed pubkey hash.  It is calculated as:
+	//
+	//   - OP_DUP
+	//   - OP_HASH160
+	//   - OP_DATA_20
+	//   - 20 bytes pubkey hash
+	//   - OP_EQUALVERIFY
+	//   - OP_CHECKSIG
+	P2PKHPkScriptSize = 1 + 1 + 1 + 20 + 1 + 1
+
+	// RedeemP2PKHInputSize is the worst case (largest) serialize size of a
+	// transaction input redeeming a compressed P2PKH output.  It is
+	// calculated as:
+	//
+	//   - 32 bytes previous tx
+	//   - 4 bytes output index
+	//   - 1 byte compact int encoding value 107
+	//   - 107 bytes signature script
+	//   - 4 bytes sequence
+	RedeemP2PKHInputSize = 32 + 4 + 1 + RedeemP2PKHSigScriptSize + 4
+
+	// P2PKHOutputSize is the serialize size of a transaction output with a
+	// P2PKH output script.  It is calculated as:
+	//
+	//   - 8 bytes output value
+	//   - 1 byte compact int encoding value 25
+	//   - 25 bytes P2PKH output script
+	P2PKHOutputSize = 8 + 1 + P2PKHPkScriptSize
+
+	// P2WPKHPkScriptSize is the size of a transaction output script that
+	// pays to a witness pubkey hash. It is calculated as:
+	//
+	//   - OP_0
+	//   - OP_DATA_20
+	//   - 20 bytes pubkey hash
+	P2WPKHPkScriptSize = 1 + 1 + 20
+
+	// P2WPKHOutputSize is the serialize size of a transaction output with a
+	// P2WPKH output script. It is calculated as:
+	//
+	//   - 8 bytes output value
+	//   - 1 byte compact int encoding value 22
+	//   - 22 bytes P2PKH output script
+	P2WPKHOutputSize = 8 + 1 + P2WPKHPkScriptSize
+
+	// RedeemP2WPKHScriptSize is the size of a transaction input script
+	// that spends a pay-to-witness-public-key hash (P2WPKH). The redeem
+	// script for P2WPKH spends MUST be empty.
+	RedeemP2WPKHScriptSize = 0
+
+	// RedeemP2WPKHInputSize is the worst case size of a transaction
+	// input redeeming a P2WPKH output. It is calculated as:
+	//
+	//   - 32 bytes previous tx
+	//   - 4 bytes output index
+	//   - 1 byte encoding empty redeem script
+	//   - 0 bytes redeem script
+	//   - 4 bytes sequence
+	RedeemP2WPKHInputSize = 32 + 4 + 1 + RedeemP2WPKHScriptSize + 4
+
+	// RedeemNestedP2WPKHScriptSize is the worst case size of a transaction
+	// input script that redeems a pay-to-witness-key hash nested in P2SH
+	// (P2SH-P2WPKH). It is calculated as:
+	//
+	//   - 1 byte compact int encoding value 22
+	//   - OP_0
+	//   - 1 byte compact int encoding value 20
+	//   - 20 byte key hash
+	RedeemNestedP2WPKHScriptSize = 1 + 1 + 1 + 20
+
+	// RedeemNestedP2WPKHInputSize is the worst case size of a
+	// transaction input redeeming a P2SH-P2WPKH output. It is
+	// calculated as:
+	//
+	//   - 32 bytes previous tx
+	//   - 4 bytes output index
+	//   - 1 byte compact int encoding value 23
+	//   - 23 bytes redeem script (scriptSig)
+	//   - 4 bytes sequence
+	RedeemNestedP2WPKHInputSize = 32 + 4 + 1 + RedeemNestedP2WPKHScriptSize + 4
+
+	// RedeemP2WPKHInputWitnessWeight is the worst case weight of
+	// a witness for spending P2WPKH and nested P2WPKH outputs. It
+	// is calculated as:
+	//
+	//   - 1 wu compact int encoding value 2 (number of items)
+	//   - 1 wu compact int encoding value 73
+	//   - 72 wu DER signature + 1 wu sighash
+	//   - 1 wu compact int encoding value 33
+	//   - 33 wu serialized compressed pubkey
+	RedeemP2WPKHInputWitnessWeight = 1 + 1 + 73 + 1 + 33
+)
+
 type BTCAddress string
 
 type BTCTX struct {
@@ -94,57 +200,9 @@ func newBTCTX(from, to BTCAddress, amount int64, fee float64) BTCTX {
 // P2SH type starting with the number 3, eg: 3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy.
 // Input with compressed pubkey (92 bytes):36 prev outpoint, 1 script len, 0 script (not sigScript), 107=67 witness stack bytes [1 element length, 33 compressed pubkey,element length 72 sig], 4 sequence
 // Output to hash (31 bytes):8 value, 1 script len, 22 script [1 OP_HASH_160, 20 hash, 1 OP_EQUAL]
+// 7b54371cd23c5105119c3da9a905c0dd5d3cbf5719eb87676d38942ea1e6a484：191 bytes = 10 bytes + 1 * 147 bytes + 1 * 34 bytes
+//
 func estimateFee(inAddrNum, outAddrNum, feeRate float64) float64 {
-
-	byteNum := inAddrNum*148 + 34*outAddrNum + 10
+	byteNum := inAddrNum*149 + 34*outAddrNum + 10
 	return byteNum * feeRate / 1e8
 }
-
-// baseSize returns the serialized size of the transaction without accounting
-// for any witness data.
-/*func (msg *BTCTX) baseSize() int {
-	// Version 4 bytes + LockTime 4 bytes + Serialized varint size for the
-	// number of transaction inputs and outputs.
-	n := 8 + uint64(len(msg.Vin)) + uint64(len(msg.Vout))
-
-	for _, txIn := range msg.Vin {
-		n += txIn.SerializeSize()
-	}
-
-	for _, txOut := range msg.Vout {
-		n += txOut.SerializeSize()
-	}
-
-	return n
-}*/
-
-// SerializeSize returns the number of bytes it would take to serialize the
-// the transaction input.
-/*func (t *Vin) SerializeSize() int {
-	// Outpoint Hash 32 bytes + Outpoint Index 4 bytes + Sequence 4 bytes +
-	// serialized varint size for the length of SignatureScript +
-	// SignatureScript bytes.
-	return 40 + len(t.ScriptSig) +	len(t.ScriptSig)
-}*/
-
-// SerializeSize returns the number of bytes it would take to serialize the
-// the transaction output.
-/*func (t *Vout) SerializeSize() int {
-	// Value 8 bytes + serialized varint size for the length of PkScript +
-	// PkScript bytes.
-	return 8 + len(t.ScriptPubKey) + len(t.ScriptPubKey)
-}*/
-
-// makeInputSource creates an InputSource that creates inputs for every unspent
-// output with non-zero output values.  The target amount is ignored since every
-// output is consumed.  The InputSource does not return any previous output
-// scripts as they are not needed for creating the unsinged transaction and are
-// looked up again by the wallet during the call to signrawtransaction.
-/*func (tx BTCTX) makeVin(unspents []Unspent)  {
-	var vins []Vin
-	for _, unspent := range unspents {
-		vin := Vin{
-
-		}
-	}
-}*/
