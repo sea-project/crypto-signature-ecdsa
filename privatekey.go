@@ -2,7 +2,12 @@ package ecdsa
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	e "crypto/ecdsa"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -15,6 +20,16 @@ import (
 type PrivateKey e.PrivateKey
 
 var (
+	// 解密过程中，当消息验证检查(MAC)失败时，发生ErrInvalidMAC。这是因为无效的私钥或损坏的密文。
+	errInvalidMAC = errors.New("invalid mac hash")
+	// 发生在解密函数的输入密文长度小于134字节的情况下。
+	errInputTooShort = errors.New("ciphertext too short")
+	// 发生在加密文本的前两个字节不是0x02CA (= 712 = secp256k1，来自OpenSSL)的时候。
+	errUnsupportedCurve = errors.New("unsupported curve")
+	errInvalidXLength   = errors.New("invalid X length, must be 32")
+	errInvalidYLength   = errors.New("invalid Y length, must be 32")
+	errInvalidPadding   = errors.New("invalid PKCS#7 padding")
+	
 	secp256k1N, _ = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
 )
 
@@ -46,6 +61,87 @@ func (p *PrivateKey) ToByte() []byte {
 // Sign 使用私钥为提供的散列(应该是散列较大消息的结果)生成ECDSA签名。生成的签名是确定性的(相同的消息和相同的密钥生成相同的签名)，并且符合RFC6979和BIP0062的规范。
 func (p *PrivateKey) Sign(hash []byte) (*Signature, error) {
 	return signRFC6979(p, hash)
+}
+
+// Decrypt 私钥解密
+func (p *PrivateKey) Decrypt(in []byte) ([]byte, error) {
+	// IV + Curve params/X/Y + 1 block + HMAC-256
+	if len(in) < aes.BlockSize+70+aes.BlockSize+sha256.Size {
+		return nil, errInputTooShort
+	}
+
+	// read iv
+	iv := in[:aes.BlockSize]
+	offset := aes.BlockSize
+
+	// start reading pubkey
+	if !bytes.Equal(in[offset:offset+2], ciphCurveBytes[:]) {
+		return nil, errUnsupportedCurve
+	}
+	offset += 2
+
+	if !bytes.Equal(in[offset:offset+2], ciphCoordLength[:]) {
+		return nil, errInvalidXLength
+	}
+	offset += 2
+
+	xBytes := in[offset : offset+32]
+	offset += 32
+
+	if !bytes.Equal(in[offset:offset+2], ciphCoordLength[:]) {
+		return nil, errInvalidYLength
+	}
+	offset += 2
+
+	yBytes := in[offset : offset+32]
+	offset += 32
+
+	pb := make([]byte, PubKeyBytesLenUncompressed)
+	pb[0] = byte(0x04) // uncompressed
+	copy(pb[1:33], xBytes)
+	copy(pb[33:], yBytes)
+	// 检查(X, Y)是否位于曲线上，如果位于曲线上，则创建一个Pubkey
+	pubkey, err := UnmarshalPubkey(pb)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查密码文本的长度
+	if (len(in)-aes.BlockSize-offset-sha256.Size)%aes.BlockSize != 0 {
+		return nil, errInvalidPadding // not padded to 16 bytes
+	}
+
+	// 生成共享密钥
+	ecdhKey := GenerateSharedSecret(p, pubkey)
+	derivedKey := sha512.Sum512(ecdhKey)
+	keyE := derivedKey[:32]
+	keyM := derivedKey[32:]
+
+	// verify mac
+	hm := hmac.New(sha256.New, keyM)
+	hm.Write(in[:len(in)-sha256.Size]) // everything is hashed
+	expectedMAC := hm.Sum(nil)
+	messageMAC := in[len(in)-sha256.Size:]
+	if !hmac.Equal(messageMAC, expectedMAC) {
+		return nil, errInvalidMAC
+	}
+
+	// 开始解密
+	block, err := aes.NewCipher(keyE)
+	if err != nil {
+		return nil, err
+	}
+
+	plaintext := make([]byte, len(in)-offset-sha256.Size)
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(plaintext, in[offset:len(in)-sha256.Size])
+
+	length := len(plaintext)
+	padLength := int(plaintext[length-1])
+	if padLength > aes.BlockSize || length < aes.BlockSize {
+		return nil, errInvalidPadding
+	}
+	return plaintext[:length-padLength], nil
 }
 
 // HexToECDSA 哈希字符串转私钥

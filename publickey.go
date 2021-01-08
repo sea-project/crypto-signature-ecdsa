@@ -1,13 +1,21 @@
 package ecdsa
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	e "crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	ecc "github.com/sea-project/crypto-ecc-s256"
 	sha3 "github.com/sea-project/crypto-hash-sha3"
+	"io"
 	"math/big"
 )
 
@@ -22,6 +30,11 @@ const (
 	// y_bit + x coord
 	pubkeyCompressed byte = 0x2
 	pubkeyHybrid     byte = 0x6 // y_bit + x coord + y coord
+)
+
+var (
+	ciphCurveBytes  = [2]byte{0x02, 0xCA}
+	ciphCoordLength = [2]byte{0x00, 0x20}
 )
 
 type PublicKey e.PublicKey
@@ -71,6 +84,54 @@ func (p *PublicKey) FromECDSAPub() []byte {
 		return nil
 	}
 	return elliptic.Marshal(ecc.S256(), p.X, p.Y)
+}
+
+// Encrypt 公钥加密
+func (p *PublicKey) Encrypt(data []byte) ([]byte, error) {
+
+	// 利用新私钥与公钥生成共享秘钥
+	newprv, _ := GenerateKey()
+	derivedKey := sha512.Sum512(GenerateSharedSecret(newprv, p))
+	keyE := derivedKey[:32]
+	keyM := derivedKey[32:]
+
+	padding := aes.BlockSize - len(data) % aes.BlockSize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	paddedIn := append(data, padtext...)
+
+	out := make([]byte, aes.BlockSize+70+len(paddedIn)+sha256.Size)
+	iv := out[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, err
+	}
+
+	pb := newprv.ToPubKey().SerializeUncompressed()
+	offset := aes.BlockSize
+	copy(out[offset:offset+4], append(ciphCurveBytes[:], ciphCoordLength[:]...))
+	offset += 4
+	// X
+	copy(out[offset:offset+32], pb[1:33])
+	offset += 32
+	// Y length
+	copy(out[offset:offset+2], ciphCoordLength[:])
+	offset += 2
+	// Y
+	copy(out[offset:offset+32], pb[33:])
+	offset += 32
+
+	// 开始加密
+	block, err := aes.NewCipher(keyE)
+	if err != nil {
+		return nil, err
+	}
+	mode := cipher.NewCBCEncrypter(block, iv)
+	mode.CryptBlocks(out[offset:len(out)-sha256.Size], paddedIn)
+
+	// start HMAC-SHA-256
+	hm := hmac.New(sha256.New, keyM)
+	hm.Write(out[:len(out)-sha256.Size])          // everything is hashed
+	copy(out[len(out)-sha256.Size:], hm.Sum(nil)) // write checksum
+	return out, nil
 }
 
 // ParsePubKey parses a public key for a koblitz curve from a bytestring into a
